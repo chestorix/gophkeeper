@@ -3,7 +3,7 @@ package middleware
 import (
 	"context"
 	"fmt"
-	"github.com/chestorix/gophkeeper/cmd/internal/interfaces"
+	"github.com/chestorix/gophkeeper/internal/interfaces"
 	"net/http"
 	"strings"
 )

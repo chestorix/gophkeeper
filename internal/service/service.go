@@ -2,8 +2,8 @@ package service
 
 import (
 	"context"
-	"github.com/chestorix/gophkeeper/cmd/internal/interfaces"
-	"github.com/chestorix/gophkeeper/cmd/internal/models"
+	"github.com/chestorix/gophkeeper/internal/interfaces"
+	"github.com/chestorix/gophkeeper/internal/models"
 	"github.com/sirupsen/logrus"
 )
 

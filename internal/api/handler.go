@@ -2,7 +2,7 @@ package api
 
 import (
 	"fmt"
-	"github.com/chestorix/gophkeeper/cmd/internal/interfaces"
+	"github.com/chestorix/gophkeeper/internal/interfaces"
 	"github.com/sirupsen/logrus"
 	"net/http"
 )

@@ -2,8 +2,8 @@ package api
 
 import (
 	"context"
-	"github.com/chestorix/gophkeeper/cmd/internal/config"
-	"github.com/chestorix/gophkeeper/cmd/internal/interfaces"
+	"github.com/chestorix/gophkeeper/internal/config"
+	"github.com/chestorix/gophkeeper/internal/interfaces"
 	"github.com/sirupsen/logrus"
 	"net/http"
 )

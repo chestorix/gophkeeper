@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
-	"github.com/chestorix/gophkeeper/cmd/internal/api"
-	"github.com/chestorix/gophkeeper/cmd/internal/config"
-	"github.com/chestorix/gophkeeper/cmd/internal/repository"
-	"github.com/chestorix/gophkeeper/cmd/internal/service"
+	"github.com/chestorix/gophkeeper/internal/api"
+	"github.com/chestorix/gophkeeper/internal/config"
+	"github.com/chestorix/gophkeeper/internal/repository"
+	"github.com/chestorix/gophkeeper/internal/service"
 	"github.com/sirupsen/logrus"
 	"log"
 	"net/http"

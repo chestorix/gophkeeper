@@ -1,7 +1,7 @@
 package api
 
 import (
-	mw "github.com/chestorix/gophkeeper/cmd/internal/api/middleware"
+	mw "github.com/chestorix/gophkeeper/internal/api/middleware"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/sirupsen/logrus"
@@ -29,6 +29,7 @@ func (r *Router) SetupRoutes(handler *Handler) {
 	r.Group(func(r chi.Router) {
 		r.Post("/api/user/register", handler.Register)
 		r.Post("/api/user/login", handler.Login)
+		r.Get("/test", handler.GetTest)
 	})
 
 	// Protected routes

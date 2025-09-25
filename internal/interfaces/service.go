@@ -2,7 +2,7 @@ package interfaces
 
 import (
 	"context"
-	"github.com/chestorix/gophkeeper/cmd/internal/models"
+	"github.com/chestorix/gophkeeper/internal/models"
 )
 
 type Service interface {
