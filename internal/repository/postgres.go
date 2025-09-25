@@ -34,5 +34,5 @@ func NewPostgres(dsn string) (*Postgres, error) {
 }
 
 func (p *Postgres) Test() string {
-	return "Антон Привет. Иди мойся!!!!!"
+	return "Test"
 }

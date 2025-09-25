@@ -27,8 +27,8 @@ func NewRouter(logger *logrus.Logger) *Router {
 
 func (r *Router) SetupRoutes(handler *Handler) {
 	r.Group(func(r chi.Router) {
-		r.Post("/api/user/register", handler.Register)
-		r.Post("/api/user/login", handler.Login)
+		//	r.Post("/api/user/register", handler.Register)
+		//	r.Post("/api/user/login", handler.Login)
 		r.Get("/test", handler.GetTest)
 	})
 
