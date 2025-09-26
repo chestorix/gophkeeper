@@ -16,7 +16,7 @@ type SecretItemData struct {
 	UserID    string    `json:"user_id"`
 	Type      DataType  `json:"type"`
 	Name      string    `json:"name"`
-	Metdata   string    `json:"metdata"`
+	Metadata  string    `json:"metadata"`
 	Data      []byte    `json:"data"`
 	Version   int       `json:"version"`
 	CreatedAt time.Time `json:"created_at"`
@@ -41,4 +41,22 @@ type BankData struct {
 	ExpiryDate string `json:"expiry_date"`
 	CVV        string `json:"cvv"`
 	Cardholder string `json:"cardholder"`
+}
+
+type AuthRequest struct {
+	Login    string `json:"login"`
+	Password string `json:"password"`
+}
+
+type AuthResponse struct {
+	Token string `json:"token"`
+}
+
+type SyncRequest struct {
+	LastSync time.Time        `json:"last_sync"`
+	Data     []SecretItemData `json:"data"`
+}
+type SyncResponse struct {
+	LastSync time.Time        `json:"last_sync"`
+	Data     []SecretItemData `json:"data"`
 }

@@ -3,19 +3,22 @@ package interfaces
 import (
 	"context"
 	"github.com/chestorix/gophkeeper/internal/models"
+	"time"
 )
 
 type Service interface {
-	Test() string
-	//	Register(ctx context.Context, login, password string) (string, error)
-	//	Login(ctx context.Context, login, password string) (string, error)
-	GetUserByLogin(ctx context.Context, login string) (models.User, error)
-	ValidateToken(tokenString string) (string, error)
+	Register(ctx context.Context, login string, password string) (*models.AuthResponse, error)
+	Login(ctx context.Context, login string, password string) (*models.AuthResponse, error)
+	ValidateToken(token string) (string, error)
 
-	/*	UploadOrder(ctx context.Context, userID int, orderNumber string) error
-		GetUserOrders(ctx context.Context, userID int) ([]models.Order, error)
+	GetUserByLogin(ctx context.Context, login string) (*models.User, error)
 
-		Withdraw(ctx context.Context, userID int, orderNumber string, sum float64) error
-		GetUserWithdrawals(ctx context.Context, userID int) ([]models.Withdrawal, error)
-		GetUserBalance(ctx context.Context, userID int) (current, withdrawn float64, err error)*/
+	SaveData(ctx context.Context, userID string, data *models.SecretItemData) error
+	GetData(ctx context.Context, userID string, dataID string) (*models.SecretItemData, error)
+	GetUserData(ctx context.Context, userID string, lastSync time.Time) ([]models.SecretItemData, error)
+
+	UpdateData(ctx context.Context, userID string, data *models.SecretItemData) error
+	DeleteData(ctx context.Context, userID string, dataID string) error
+
+	SyncData(ctx context.Context, userID string, req *models.SyncRequest) (*models.SyncResponse, error)
 }

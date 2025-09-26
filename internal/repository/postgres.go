@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"github.com/chestorix/gophkeeper/internal/errors"
+	"github.com/chestorix/gophkeeper/internal/models"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"time"
 )
@@ -66,4 +68,37 @@ func createTables(db *sql.DB) error {
 		}
 	}
 	return nil
+}
+
+func (p *Postgres) Register(ctx context.Context, user *models.User) error {
+	query := `INSERT INTO users (id,login,password_hash,create_at) VALUES ($1, $2, $3, $4)`
+	_, err := p.db.ExecContext(ctx, query, user.ID, user.Login, user.PasswordHash, user.CreateAt)
+	return err
+}
+func (p *Postgres) GetUserByLogin(ctx context.Context, login string) (*models.User, error) {
+	query := `SELECT id,login,password_hash,create_at FROM users WHERE login=$1`
+	var user models.User
+	err := p.db.QueryRowContext(ctx, query, login).Scan(
+		&user.ID, &user.Login, &user.PasswordHash, &user.CreateAt)
+	if err == sql.ErrNoRows {
+		return nil, errors.ErrUserNotFound
+	}
+	return &user, err
+}
+
+func (p *Postgres) GetUserByID(ctx context.Context, id string) (*models.User, error) {
+	query := `SELECT id,login,password_hash,create_at FROM users WHERE id=$1`
+	var user models.User
+	err := p.db.QueryRowContext(ctx, query, id).Scan(
+		&user.ID, &user.Login, &user.PasswordHash, &user.CreateAt)
+	if err == sql.ErrNoRows {
+		return nil, errors.ErrUserNotFound
+	}
+	return &user, err
+}
+func (p *Postgres) SaveData(ctx context.Context, data *models.SecretItemData) error {
+	query := `INSERT INTO secret_data (id,user_id,type,name,metadata,data,version,create_at,update_at)
+VALUES ($1, $2, $3, $4, $5, $6, $7, $8,$9)`
+	_, err := p.db.ExecContext(ctx, query, data.ID, data.UserID, string(data.Type), data.Name, data.Metadata, data.Version, data.CreatedAt, data.UpdatedAt)
+	return err
 }

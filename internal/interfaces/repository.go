@@ -1,16 +1,21 @@
 package interfaces
 
+import (
+	"context"
+	"github.com/chestorix/gophkeeper/internal/models"
+	"time"
+)
+
 type Repository interface {
-	Test() string
-	//	Register(ctx context.Context, login, password string) (string, error)
-	//	Login(ctx context.Context, login, password string) (string, error)
-	//	GetUserByLogin(ctx context.Context, login string) (models.User, error)
-	//	ValidateToken(tokenString string) (string, error)
+	CreateUsers(ctx context.Context, user *models.User) error
+	GetUserByLogin(ctx context.Context, login string) (*models.User, error)
+	GetUserByID(ctx context.Context, id string) (*models.User, error)
 
-	/*	UploadOrder(ctx context.Context, userID int, orderNumber string) error
-		GetUserOrders(ctx context.Context, userID int) ([]models.Order, error)
+	SaveSecretData(ctx context.Context, data *models.SecretItemData) error
+	GetSecretDataByID(ctx context.Context, id, userID string) (*models.SecretItemData, error)
+	GetUserSecretData(ctx context.Context, userID string, lastSync time.Time) ([]models.SecretItemData, error)
+	UpdateSecretData(ctx context.Context, data *models.SecretItemData) error
+	DeleteSecretData(ctx context.Context, id string, userID string) error
 
-		Withdraw(ctx context.Context, userID int, orderNumber string, sum float64) error
-		GetUserWithdrawals(ctx context.Context, userID int) ([]models.Withdrawal, error)
-		GetUserBalance(ctx context.Context, userID int) (current, withdrawn float64, err error)*/
+	Ping(ctx context.Context) error
 }
