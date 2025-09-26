@@ -24,10 +24,11 @@ type SecretItemData struct {
 }
 
 type User struct {
-	ID           int       `json:"id"`
+	ID           string    `json:"id"`
 	Login        string    `json:"login"`
 	PasswordHash string    `json:"password_hash"`
-	CreateAt     time.Time `json:"create_at"`
+	CreatedAt    time.Time `json:"create_at"`
+	UpdatedAt    time.Time `json:"update_at"`
 }
 
 type LoginPasswordData struct {

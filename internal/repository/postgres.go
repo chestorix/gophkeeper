@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/chestorix/gophkeeper/internal/errors"
 	"github.com/chestorix/gophkeeper/internal/models"
+	"github.com/google/uuid"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"time"
 )
@@ -42,23 +43,28 @@ func (p *Postgres) Test() string {
 func createTables(db *sql.DB) error {
 	queries := []string{
 		`CREATE TABLE IF NOT EXISTS users (
-            id SERIAL PRIMARY KEY,
-            login VARCHAR(255) NOT NULL UNIQUE,
-            password_hash VARCHAR(255) NOT NULL,
-            create_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
-        )`,
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			login VARCHAR(255) NOT NULL UNIQUE,
+			password_hash VARCHAR(255) NOT NULL,
+			created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+			updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+		)`,
+
 		`CREATE TABLE IF NOT EXISTS secret_data (
-            id SERIAL PRIMARY KEY,
-            user_id INTEGER NOT NULL,
-            type VARCHAR(255) NOT NULL,
-            name VARCHAR(255) NOT NULL,
-            metadata TEXT,
-            data BYTEA NOT NULL,
-            version INTEGER DEFAULT 1,
-            create_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-            update_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-            FOREIGN KEY (user_id) REFERENCES users(id)
-        )`,
+			id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+			user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+			type VARCHAR(50) NOT NULL,
+			name VARCHAR(255) NOT NULL,
+			metadata TEXT,
+			data BYTEA NOT NULL,
+			version INTEGER NOT NULL DEFAULT 1,
+			created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+			updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+			UNIQUE(user_id, name)
+		)`,
+
+		`CREATE INDEX IF NOT EXISTS idx_secret_data_user_id ON secret_data(user_id)`,
+		`CREATE INDEX IF NOT EXISTS idx_secret_data_updated_at ON secret_data(updated_at)`,
 	}
 
 	for _, query := range queries {
@@ -70,18 +76,28 @@ func createTables(db *sql.DB) error {
 	return nil
 }
 
-func (p *Postgres) Register(ctx context.Context, user *models.User) error {
-	query := `INSERT INTO users (id,login,password_hash,create_at) VALUES ($1, $2, $3, $4)`
-	_, err := p.db.ExecContext(ctx, query, user.ID, user.Login, user.PasswordHash, user.CreateAt)
+func (p *Postgres) CreateUser(ctx context.Context, user *models.User) error {
+	query := `INSERT INTO users (id, login, password_hash, created_at, updated_at) 
+			  VALUES ($1, $2, $3, $4, $5)`
+
+	user.ID = uuid.New().String()
+	user.CreatedAt = time.Now()
+	user.UpdatedAt = time.Now()
+
+	_, err := p.db.ExecContext(ctx, query, user.ID, user.Login, user.PasswordHash,
+		user.CreatedAt, user.UpdatedAt)
 	return err
 }
 func (p *Postgres) GetUserByLogin(ctx context.Context, login string) (*models.User, error) {
-	query := `SELECT id,login,password_hash,create_at FROM users WHERE login=$1`
+	query := `SELECT id,login,password_hash,created_at,updated_at FROM users WHERE login=$1`
 	var user models.User
 	err := p.db.QueryRowContext(ctx, query, login).Scan(
-		&user.ID, &user.Login, &user.PasswordHash, &user.CreateAt)
+		&user.ID, &user.Login, &user.PasswordHash, &user.CreatedAt, &user.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, errors.ErrUserNotFound
+	}
+	if err != nil {
+		return nil, err
 	}
 	return &user, err
 }
