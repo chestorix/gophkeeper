@@ -4,11 +4,12 @@ import (
 	"context"
 	"database/sql"
 	"fmt"
+	"time"
+
 	"github.com/chestorix/gophkeeper/internal/errors"
 	"github.com/chestorix/gophkeeper/internal/models"
 	"github.com/google/uuid"
 	_ "github.com/jackc/pgx/v5/stdlib"
-	"time"
 )
 
 type Postgres struct {
@@ -77,7 +78,7 @@ func createTables(db *sql.DB) error {
 }
 
 func (p *Postgres) CreateUser(ctx context.Context, user *models.User) error {
-	query := `INSERT INTO users (id, login, password_hash, created_at, updated_at) 
+	query := `INSERT INTO users (id, login, password_hash, created_at, updated_at)
 			  VALUES ($1, $2, $3, $4, $5)`
 
 	user.ID = uuid.New().String()
@@ -103,18 +104,111 @@ func (p *Postgres) GetUserByLogin(ctx context.Context, login string) (*models.Us
 }
 
 func (p *Postgres) GetUserByID(ctx context.Context, id string) (*models.User, error) {
-	query := `SELECT id,login,password_hash,create_at FROM users WHERE id=$1`
+	query := `SELECT id,login,password_hash,created_at,updated_at FROM users WHERE id=$1`
 	var user models.User
 	err := p.db.QueryRowContext(ctx, query, id).Scan(
-		&user.ID, &user.Login, &user.PasswordHash, &user.CreateAt)
+		&user.ID, &user.Login, &user.PasswordHash, &user.CreatedAt, &user.UpdatedAt)
 	if err == sql.ErrNoRows {
 		return nil, errors.ErrUserNotFound
 	}
 	return &user, err
 }
-func (p *Postgres) SaveData(ctx context.Context, data *models.SecretItemData) error {
-	query := `INSERT INTO secret_data (id,user_id,type,name,metadata,data,version,create_at,update_at)
-VALUES ($1, $2, $3, $4, $5, $6, $7, $8,$9)`
-	_, err := p.db.ExecContext(ctx, query, data.ID, data.UserID, string(data.Type), data.Name, data.Metadata, data.Version, data.CreatedAt, data.UpdatedAt)
+func (p *Postgres) SaveSecretData(ctx context.Context, data *models.SecretItemData) error {
+	query := `INSERT INTO secret_data (id, user_id, type, name, metadata, data, version, created_at, updated_at)
+			  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
+
+	data.ID = uuid.New().String()
+	data.CreatedAt = time.Now()
+	data.UpdatedAt = time.Now()
+
+	_, err := p.db.ExecContext(ctx, query,
+		data.ID, data.UserID, string(data.Type), data.Name, data.Metadata,
+		data.Data, data.Version, data.CreatedAt, data.UpdatedAt)
 	return err
+}
+
+func (p *Postgres) GetSecretDataByID(ctx context.Context, id string, userID string) (*models.SecretItemData, error) {
+	query := `SELECT id,user_id,type,name,metadata,data,version.created_at,updated_at FROM secret_data WHERE id=$1 AND user_id=$2`
+	var data models.SecretItemData
+	err := p.db.QueryRowContext(ctx, query, id, userID).Scan(
+		&data.ID, &data.UserID, &data.Type, &data.Name, &data.Metadata,
+		&data.Data, &data.Version, &data.CreatedAt, &data.UpdatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, errors.ErrDataNotFound
+	}
+	if err == sql.ErrNoRows {
+		return nil, errors.ErrDataNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return &data, nil
+}
+
+func (p *Postgres) GetUserSecretData(ctx context.Context, userID string, lastSync time.Time) ([]models.SecretItemData, error) {
+	query := `SELECT id, user_id, type, name, metadata, data, version, created_at, updated_at
+			  FROM secret_data WHERE user_id = $1 AND updated_at > $2
+			  ORDER BY updated_at DESC`
+
+	rows, err := p.db.QueryContext(ctx, query, userID, lastSync)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var data []models.SecretItemData
+	for rows.Next() {
+		var item models.SecretItemData
+		err := rows.Scan(
+			&item.ID, &item.UserID, &item.Type, &item.Name, &item.Metadata,
+			&item.Data, &item.Version, &item.CreatedAt, &item.UpdatedAt,
+		)
+		if err != nil {
+			return nil, err
+		}
+		data = append(data, item)
+	}
+
+	return data, nil
+}
+
+func (p *Postgres) UpdateSecretData(ctx context.Context, data *models.SecretItemData) error {
+	query := `UPDATE secret_data 
+			  SET type = $1, name = $2, metadata = $3, data = $4, version = version + 1, updated_at = $5
+			  WHERE id = $6 AND user_id = $7`
+
+	data.UpdatedAt = time.Now()
+	result, err := p.db.ExecContext(ctx, query,
+		string(data.Type), data.Name, data.Metadata, data.Data, data.UpdatedAt,
+		data.ID, data.UserID)
+	if err != nil {
+		return err
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return errors.ErrDataNotFound
+	}
+	return nil
+}
+
+func (p *Postgres) DeleteSecretData(ctx context.Context, id, userID string) error {
+	query := `DELETE FROM secret_data WHERE id = $1 AND user_id = $2`
+	result, err := p.db.ExecContext(ctx, query, id, userID)
+	if err != nil {
+		return err
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return errors.ErrDataNotFound
+	}
+	return nil
 }
