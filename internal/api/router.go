@@ -28,17 +28,18 @@ func NewRouter(logger *logrus.Logger) *Router {
 func (r *Router) SetupRoutes(handler *Handler) {
 	r.Group(func(r chi.Router) {
 		r.Post("/api/user/register", handler.Register)
-		//	r.Post("/api/user/login", handler.Login)
+		r.Post("/api/user/login", handler.Login)
+		r.Get("/health", handler.Health)
 	})
 
 	// Protected routes
 	r.Group(func(r chi.Router) {
 		r.Use(mw.Auth(handler.service))
-
-		/*	r.Post("/api/user/orders", handler.UploadOrder)
-			r.Get("/api/user/orders", handler.GetUserOrders)
-			r.Get("/api/user/balance", handler.GetUserBalance)
-			r.Post("/api/user/balance/withdraw", handler.Withdraw)
-			r.Get("/api/user/withdrawals", handler.GetUserWithdrawals)*/
+		r.Post("/api/data", handler.SaveData)
+		r.Get("/api/data", handler.ListData)
+		r.Get("/api/data/{id}", handler.GetData)
+		r.Put("/api/data/{id}", handler.UpdateData)
+		r.Delete("/api/data/{id}", handler.DeleteData)
+		r.Post("/api/sync", handler.SyncData)
 	})
 }

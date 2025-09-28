@@ -20,24 +20,23 @@ func Auth(authService interfaces.Service) func(http.Handler) http.Handler {
 				http.Error(w, "unauthorized", http.StatusUnauthorized)
 				return
 			}
-			fmt.Println("token ", token)
-			if strings.HasPrefix(token, "Bearer") {
+
+			fmt.Println("Received token:", token)
+
+			if strings.HasPrefix(token, "Bearer ") {
 				token = strings.TrimPrefix(token, "Bearer ")
 			}
 
-			login, err := authService.ValidateToken(token)
+			userID, err := authService.ValidateToken(token)
 			if err != nil {
+				fmt.Println("Token validation error:", err)
 				http.Error(w, "unauthorized", http.StatusUnauthorized)
 				return
 			}
 
-			user, err := authService.GetUserByLogin(r.Context(), login)
-			if err != nil {
-				http.Error(w, "unauthorized", http.StatusUnauthorized)
-				return
-			}
+			fmt.Println("Validated userID:", userID)
 
-			ctx := context.WithValue(r.Context(), UserIDKey, user.ID)
+			ctx := context.WithValue(r.Context(), UserIDKey, userID)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
 	}
