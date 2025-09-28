@@ -37,10 +37,6 @@ func NewPostgres(dsn string) (*Postgres, error) {
 	}, nil
 }
 
-func (p *Postgres) Test() string {
-	return "Test"
-}
-
 func createTables(db *sql.DB) error {
 	queries := []string{
 		`CREATE TABLE IF NOT EXISTS users (
@@ -77,7 +73,7 @@ func createTables(db *sql.DB) error {
 	return nil
 }
 
-func (p *Postgres) CreateUser(ctx context.Context, user *models.User) error {
+func (p *Postgres) CreateUsers(ctx context.Context, user *models.User) error {
 	query := `INSERT INTO users (id, login, password_hash, created_at, updated_at)
 			  VALUES ($1, $2, $3, $4, $5)`
 
@@ -211,4 +207,7 @@ func (p *Postgres) DeleteSecretData(ctx context.Context, id, userID string) erro
 		return errors.ErrDataNotFound
 	}
 	return nil
+}
+func (p *Postgres) Ping(ctx context.Context) error {
+	return p.db.PingContext(ctx)
 }

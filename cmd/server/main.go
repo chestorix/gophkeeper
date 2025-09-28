@@ -22,14 +22,15 @@ func main() {
 	cfg := config.Load()
 	storage, err := repository.NewPostgres(cfg.DBURI)
 	if err != nil {
-		logger.Fatal(err)
+		logger.Fatal("Failed to connect database", err)
 	}
-	service := service.NewService(storage, logger)
+	service := service.NewService(storage, logger, cfg.JWTSecret)
 	server := api.NewServer(cfg, &service, logger)
 	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
 	go func() {
 		if err := server.Start(); err != nil && err != http.ErrServerClosed {
-			log.Fatalf("listen: %s\n", err)
+			logger.Fatal("Server error: ", err)
 		}
 	}()
 	quit := make(chan os.Signal, 1)
@@ -37,11 +38,8 @@ func main() {
 	<-quit
 	logger.Info("Shutting down server...")
 
-	defer cancel()
-
 	if err := server.Shutdown(ctx); err != nil {
 		log.Fatalf("Server forced to shutdown: %v", err)
 	}
-
 	logger.Info("Server exiting")
 }
