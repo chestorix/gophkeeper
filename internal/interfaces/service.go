@@ -9,7 +9,7 @@ import (
 type Service interface {
 	Register(ctx context.Context, login string, password string) (*models.AuthResponse, error)
 	Login(ctx context.Context, login string, password string) (*models.AuthResponse, error)
-	ValidateToken(token string) (string, error)
+	ValidateToken(tokenString string) (string, error)
 
 	GetUserByLogin(ctx context.Context, login string) (*models.User, error)
 
