@@ -1,3 +1,4 @@
+// internal/api/middleware/auth.go (альтернативная версия)
 package middleware
 
 import (
@@ -8,9 +9,7 @@ import (
 	"strings"
 )
 
-type contextKey string
-
-const UserIDKey contextKey = "userID"
+const UserIDKey = "userID"
 
 func Auth(authService interfaces.Service) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
@@ -36,6 +35,7 @@ func Auth(authService interfaces.Service) func(http.Handler) http.Handler {
 
 			fmt.Println("Validated userID:", userID)
 
+			// Используем строковый ключ
 			ctx := context.WithValue(r.Context(), UserIDKey, userID)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})
