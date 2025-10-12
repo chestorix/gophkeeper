@@ -38,8 +38,10 @@ func (r *Router) SetupRoutes(handler *Handler) {
 		r.Post("/api/data", handler.SaveData)
 		r.Get("/api/data", handler.ListData)
 		r.Get("/api/data/{id}", handler.GetData)
+		r.Get("/api/data/name/{name}", handler.GetDataByName) // НОВЫЙ ЭНДПОИНТ
 		r.Put("/api/data/{id}", handler.UpdateData)
 		r.Delete("/api/data/{id}", handler.DeleteData)
+		r.Delete("/api/data/name/{name}", handler.DeleteDataByName) // НОВЫЙ ЭНДПОИНТ
 		r.Post("/api/sync", handler.SyncData)
 	})
 }

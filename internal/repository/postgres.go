@@ -111,7 +111,7 @@ func (p *Postgres) GetUserByID(ctx context.Context, id string) (*models.User, er
 }
 func (p *Postgres) SaveSecretData(ctx context.Context, data *models.SecretItemData) error {
 	query := `INSERT INTO secret_data (id, user_id, type, name, metadata, data, version, created_at, updated_at)
-			  VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
+              VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`
 
 	data.ID = uuid.New().String()
 	data.CreatedAt = time.Now()
@@ -124,28 +124,31 @@ func (p *Postgres) SaveSecretData(ctx context.Context, data *models.SecretItemDa
 }
 
 func (p *Postgres) GetSecretDataByID(ctx context.Context, id string, userID string) (*models.SecretItemData, error) {
-	query := `SELECT id,user_id,type,name,metadata,data,version.created_at,updated_at FROM secret_data WHERE id=$1 AND user_id=$2`
+	query := `SELECT id, user_id, type, name, metadata, data, version, created_at, updated_at 
+              FROM secret_data WHERE id=$1 AND user_id=$2`
+
 	var data models.SecretItemData
+	var typeStr string
+
 	err := p.db.QueryRowContext(ctx, query, id, userID).Scan(
-		&data.ID, &data.UserID, &data.Type, &data.Name, &data.Metadata,
+		&data.ID, &data.UserID, &typeStr, &data.Name, &data.Metadata,
 		&data.Data, &data.Version, &data.CreatedAt, &data.UpdatedAt,
 	)
-	if err == sql.ErrNoRows {
-		return nil, errors.ErrDataNotFound
-	}
 	if err == sql.ErrNoRows {
 		return nil, errors.ErrDataNotFound
 	}
 	if err != nil {
 		return nil, err
 	}
+
+	data.Type = models.DataType(typeStr)
 	return &data, nil
 }
 
 func (p *Postgres) GetUserSecretData(ctx context.Context, userID string, lastSync time.Time) ([]models.SecretItemData, error) {
 	query := `SELECT id, user_id, type, name, metadata, data, version, created_at, updated_at
-			  FROM secret_data WHERE user_id = $1 AND updated_at > $2
-			  ORDER BY updated_at DESC`
+              FROM secret_data WHERE user_id = $1 AND updated_at > $2
+              ORDER BY updated_at DESC`
 
 	rows, err := p.db.QueryContext(ctx, query, userID, lastSync)
 	if err != nil {
@@ -156,14 +159,22 @@ func (p *Postgres) GetUserSecretData(ctx context.Context, userID string, lastSyn
 	var data []models.SecretItemData
 	for rows.Next() {
 		var item models.SecretItemData
+		var typeStr string
+
 		err := rows.Scan(
-			&item.ID, &item.UserID, &item.Type, &item.Name, &item.Metadata,
+			&item.ID, &item.UserID, &typeStr, &item.Name, &item.Metadata,
 			&item.Data, &item.Version, &item.CreatedAt, &item.UpdatedAt,
 		)
 		if err != nil {
 			return nil, err
 		}
+
+		item.Type = models.DataType(typeStr)
 		data = append(data, item)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, err
 	}
 
 	return data, nil
@@ -171,8 +182,8 @@ func (p *Postgres) GetUserSecretData(ctx context.Context, userID string, lastSyn
 
 func (p *Postgres) UpdateSecretData(ctx context.Context, data *models.SecretItemData) error {
 	query := `UPDATE secret_data 
-			  SET type = $1, name = $2, metadata = $3, data = $4, version = version + 1, updated_at = $5
-			  WHERE id = $6 AND user_id = $7`
+              SET type = $1, name = $2, metadata = $3, data = $4, version = version + 1, updated_at = $5
+              WHERE id = $6 AND user_id = $7`
 
 	data.UpdatedAt = time.Now()
 	result, err := p.db.ExecContext(ctx, query,
@@ -210,4 +221,43 @@ func (p *Postgres) DeleteSecretData(ctx context.Context, id, userID string) erro
 }
 func (p *Postgres) Ping(ctx context.Context) error {
 	return p.db.PingContext(ctx)
+}
+
+func (p *Postgres) GetSecretDataByName(ctx context.Context, name, userID string) (*models.SecretItemData, error) {
+	query := `SELECT id, user_id, type, name, metadata, data, version, created_at, updated_at 
+              FROM secret_data WHERE name=$1 AND user_id=$2`
+
+	var data models.SecretItemData
+	var typeStr string
+
+	err := p.db.QueryRowContext(ctx, query, name, userID).Scan(
+		&data.ID, &data.UserID, &typeStr, &data.Name, &data.Metadata,
+		&data.Data, &data.Version, &data.CreatedAt, &data.UpdatedAt,
+	)
+	if err == sql.ErrNoRows {
+		return nil, errors.ErrDataNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+
+	data.Type = models.DataType(typeStr)
+	return &data, nil
+}
+
+func (p *Postgres) DeleteSecretDataByName(ctx context.Context, name, userID string) error {
+	query := `DELETE FROM secret_data WHERE name = $1 AND user_id = $2`
+	result, err := p.db.ExecContext(ctx, query, name, userID)
+	if err != nil {
+		return err
+	}
+
+	rows, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if rows == 0 {
+		return errors.ErrDataNotFound
+	}
+	return nil
 }

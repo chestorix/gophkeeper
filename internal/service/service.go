@@ -130,3 +130,11 @@ func (s *Service) SyncData(ctx context.Context, userID string, req *models.SyncR
 		Data:     serverData,
 	}, nil
 }
+
+func (s *Service) GetDataByName(ctx context.Context, userID string, name string) (*models.SecretItemData, error) {
+	return s.repo.GetSecretDataByName(ctx, name, userID)
+}
+
+func (s *Service) DeleteDataByName(ctx context.Context, userID string, name string) error {
+	return s.repo.DeleteSecretDataByName(ctx, name, userID)
+}

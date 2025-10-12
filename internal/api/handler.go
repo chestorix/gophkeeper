@@ -170,18 +170,22 @@ func (h *Handler) GetData(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	dataID := chi.URLParam(r, "dataID")
+
+	dataID := chi.URLParam(r, "id")
 
 	data, err := h.service.GetData(r.Context(), userID, dataID)
 	if err != nil {
 		h.logger.Errorf("Getting data failed: %v", err)
 		http.Error(w, fmt.Sprintf("Getting data failed: %v", err), http.StatusNotFound)
+		return
 	}
+
 	w.Header().Set("Content-Type", "application/json")
 	err = json.NewEncoder(w).Encode(data)
 	if err != nil {
 		h.logger.Errorf("Encoding failed %v", err)
 		http.Error(w, "encoding failed", http.StatusInternalServerError)
+		return
 	}
 	w.WriteHeader(http.StatusOK)
 }
@@ -234,4 +238,49 @@ func (h *Handler) DeleteData(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Health(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
+}
+
+func (h *Handler) GetDataByName(w http.ResponseWriter, r *http.Request) {
+	userID, err := h.getUserIDFromContext(r)
+	if err != nil {
+		h.logger.Errorf("Failed to get userID from context: %v", err)
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	name := chi.URLParam(r, "name")
+
+	data, err := h.service.GetDataByName(r.Context(), userID, name)
+	if err != nil {
+		h.logger.Errorf("Getting data by name failed: %v", err)
+		http.Error(w, fmt.Sprintf("Getting data failed: %v", err), http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	err = json.NewEncoder(w).Encode(data)
+	if err != nil {
+		h.logger.Errorf("Encoding failed %v", err)
+		http.Error(w, "encoding failed", http.StatusInternalServerError)
+		return
+	}
+	w.WriteHeader(http.StatusOK)
+}
+
+func (h *Handler) DeleteDataByName(w http.ResponseWriter, r *http.Request) {
+	userID, err := h.getUserIDFromContext(r)
+	if err != nil {
+		h.logger.Errorf("Failed to get userID from context: %v", err)
+		http.Error(w, "unauthorized", http.StatusUnauthorized)
+		return
+	}
+	name := chi.URLParam(r, "name")
+
+	if err := h.service.DeleteDataByName(r.Context(), userID, name); err != nil {
+		h.logger.Errorf("Failed to delete data by name: %v", err)
+		http.Error(w, fmt.Sprintf("failed to delete data: %v", err), http.StatusInternalServerError)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
 }

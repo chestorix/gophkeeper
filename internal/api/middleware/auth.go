@@ -1,4 +1,4 @@
-// internal/api/middleware/auth.go (альтернативная версия)
+// internal/api/middleware/auth.go
 package middleware
 
 import (
@@ -19,7 +19,6 @@ func Auth(authService interfaces.Service) func(http.Handler) http.Handler {
 				http.Error(w, "unauthorized", http.StatusUnauthorized)
 				return
 			}
-
 			fmt.Println("Received token:", token)
 
 			if strings.HasPrefix(token, "Bearer ") {
@@ -35,7 +34,6 @@ func Auth(authService interfaces.Service) func(http.Handler) http.Handler {
 
 			fmt.Println("Validated userID:", userID)
 
-			// Используем строковый ключ
 			ctx := context.WithValue(r.Context(), UserIDKey, userID)
 			next.ServeHTTP(w, r.WithContext(ctx))
 		})

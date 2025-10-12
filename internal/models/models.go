@@ -33,7 +33,7 @@ type User struct {
 
 type LoginPasswordData struct {
 	Login    string `json:"login"`
-	Pass     string `json:"pass"`
+	Password string `json:"pass"`
 	Resource string `json:"resource"`
 }
 
