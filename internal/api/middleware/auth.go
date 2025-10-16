@@ -1,4 +1,5 @@
-// internal/api/middleware/auth.go
+// Package middleware предоставляет промежуточное ПО для HTTP handlers.
+// Включает аутентификацию, логирование и другие cross-cutting concerns.
 package middleware
 
 import (
@@ -9,8 +10,16 @@ import (
 	"strings"
 )
 
+// UserIDKey является ключом для хранения ID пользователя в контексте.
 const UserIDKey = "userID"
 
+// Auth создает middleware для аутентификации пользователей через JWT токены.
+// Извлекает токен из заголовка Authorization, проверяет его валидность
+// и устанавливает userID в контекст запроса для последующих handlers.
+//
+// authService: сервис для валидации JWT токенов
+//
+// Возвращает middleware функцию для использования с роутером.
 func Auth(authService interfaces.Service) func(http.Handler) http.Handler {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

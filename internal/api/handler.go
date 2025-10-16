@@ -1,3 +1,5 @@
+// Package api предоставляет HTTP handlers для REST API GophKeeper.
+// Обрабатывает входящие запросы, валидирует данные и возвращает ответы.
 package api
 
 import (
@@ -11,11 +13,17 @@ import (
 	"time"
 )
 
+// Handler предоставляет методы для обработки HTTP запросов.
+// Инкапсулирует бизнес-логику через интерфейс Service.
 type Handler struct {
 	service interfaces.Service
 	logger  *logrus.Logger
 }
 
+// NewHandler создает новый экземпляр Handler с заданными зависимостями.
+//
+// service: сервис для выполнения бизнес-логики
+// logger: логгер для записи событий
 func NewHandler(service interfaces.Service, logger *logrus.Logger) *Handler {
 	return &Handler{
 		service: service,
@@ -23,6 +31,8 @@ func NewHandler(service interfaces.Service, logger *logrus.Logger) *Handler {
 	}
 }
 
+// getUserIDFromContext извлекает ID пользователя из контекста запроса.
+// Используется middleware аутентификации для установки userID.
 func (h *Handler) getUserIDFromContext(r *http.Request) (string, error) {
 	userID := r.Context().Value("userID")
 	if userID == nil {
@@ -37,6 +47,8 @@ func (h *Handler) getUserIDFromContext(r *http.Request) (string, error) {
 	return userIDStr, nil
 }
 
+// Register обрабатывает запрос на регистрацию нового пользователя.
+// POST /api/user/register
 func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	var req models.AuthRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -63,6 +75,8 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// Login обрабатывает запрос на аутентификацию пользователя.
+// POST /api/user/login
 func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 	var req models.AuthRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -82,9 +96,10 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "encoding failed", http.StatusInternalServerError)
 	}
 	w.WriteHeader(http.StatusOK)
-
 }
 
+// ListData возвращает список секретных данных пользователя.
+// GET /api/data?last_sync=2023-01-01T00:00:00Z
 func (h *Handler) ListData(w http.ResponseWriter, r *http.Request) {
 	userID, err := h.getUserIDFromContext(r)
 	if err != nil {
@@ -92,7 +107,7 @@ func (h *Handler) ListData(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "unauthorized", http.StatusUnauthorized)
 		return
 	}
-	h.logger.Info(userID)
+
 	lastSyncStr := r.URL.Query().Get("last_sync")
 	var lastSync time.Time
 	if lastSyncStr != "" {
@@ -115,6 +130,8 @@ func (h *Handler) ListData(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(data)
 }
 
+// UpdateData обновляет существующие секретные данные.
+// PUT /api/data/{id}
 func (h *Handler) UpdateData(w http.ResponseWriter, r *http.Request) {
 	userID, err := h.getUserIDFromContext(r)
 	if err != nil {
@@ -141,6 +158,8 @@ func (h *Handler) UpdateData(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// SaveData сохраняет новые секретные данные.
+// POST /api/data
 func (h *Handler) SaveData(w http.ResponseWriter, r *http.Request) {
 	userID, err := h.getUserIDFromContext(r)
 	if err != nil {
@@ -163,6 +182,8 @@ func (h *Handler) SaveData(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusCreated)
 }
 
+// GetData возвращает секретные данные по ID.
+// GET /api/data/{id}
 func (h *Handler) GetData(w http.ResponseWriter, r *http.Request) {
 	userID, err := h.getUserIDFromContext(r)
 	if err != nil {
@@ -190,6 +211,8 @@ func (h *Handler) GetData(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// SyncData выполняет синхронизацию данных между клиентом и сервером.
+// POST /api/sync
 func (h *Handler) SyncData(w http.ResponseWriter, r *http.Request) {
 	userID, err := h.getUserIDFromContext(r)
 	if err != nil {
@@ -217,6 +240,8 @@ func (h *Handler) SyncData(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// DeleteData удаляет секретные данные по ID.
+// DELETE /api/data/{id}
 func (h *Handler) DeleteData(w http.ResponseWriter, r *http.Request) {
 	userID, err := h.getUserIDFromContext(r)
 	if err != nil {
@@ -235,11 +260,15 @@ func (h *Handler) DeleteData(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// Health проверяет доступность сервера.
+// GET /health
 func (h *Handler) Health(w http.ResponseWriter, _ *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 }
 
+// GetDataByName возвращает секретные данные по имени.
+// GET /api/data/name/{name}
 func (h *Handler) GetDataByName(w http.ResponseWriter, r *http.Request) {
 	userID, err := h.getUserIDFromContext(r)
 	if err != nil {
@@ -267,6 +296,8 @@ func (h *Handler) GetDataByName(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
 }
 
+// DeleteDataByName удаляет секретные данные по имени.
+// DELETE /api/data/name/{name}
 func (h *Handler) DeleteDataByName(w http.ResponseWriter, r *http.Request) {
 	userID, err := h.getUserIDFromContext(r)
 	if err != nil {

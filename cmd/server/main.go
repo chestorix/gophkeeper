@@ -24,8 +24,8 @@ func main() {
 	if err != nil {
 		logger.Fatal("Failed to connect database", err)
 	}
-	service := service.NewService(storage, logger, cfg.JWTSecret)
-	server := api.NewServer(cfg, &service, logger)
+	serv := service.NewService(storage, logger, cfg.JWTSecret)
+	server := api.NewServer(cfg, &serv, logger)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	go func() {
