@@ -4,13 +4,12 @@ package service
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"github.com/chestorix/gophkeeper/internal/errors"
 	"github.com/chestorix/gophkeeper/internal/interfaces"
 	"github.com/chestorix/gophkeeper/internal/models"
 	"github.com/golang-jwt/jwt/v4"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/crypto/bcrypt"
 	"time"
 )
 
@@ -41,9 +40,18 @@ func NewService(repo interfaces.Repository, logger *logrus.Logger, jwtSecret str
 
 // hashPassword создает SHA256 хэш от пароля.
 // Используется для безопасного хранения паролей в базе данных.
-func (s *Service) hashPassword(password string) string {
-	hash := sha256.Sum256([]byte(password))
-	return hex.EncodeToString(hash[:])
+func (s *Service) hashPassword(password string) (string, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+	return string(hash), nil
+}
+
+// verifyPassword проверяет соответствие пароля и хэша.
+func (s *Service) verifyPassword(password, hash string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	return err == nil
 }
 
 // generateToken создает JWT токен для пользователя с временем жизни 24 часа.
@@ -74,13 +82,21 @@ func (s *Service) Register(ctx context.Context, login, password string) (*models
 	if err == nil && existingUser != nil {
 		return nil, errors.ErrUserAlreadyExists
 	}
+
+	passwordHash, err := s.hashPassword(password)
+	if err != nil {
+		return nil, errors.ErrCreateUserFailed
+	}
+
 	user := &models.User{
 		Login:        login,
-		PasswordHash: s.hashPassword(password),
+		PasswordHash: passwordHash,
 	}
+
 	if err := s.repo.CreateUsers(ctx, user); err != nil {
 		return nil, errors.ErrCreateUserFailed
 	}
+
 	token, err := s.generateToken(user)
 	if err != nil {
 		return nil, errors.ErrGenerateTokenFailed
@@ -101,9 +117,11 @@ func (s *Service) Login(ctx context.Context, login, password string) (*models.Au
 	if err != nil {
 		return nil, errors.ErrInvalidCredentials
 	}
-	if user.PasswordHash != s.hashPassword(password) {
+
+	if !s.verifyPassword(password, user.PasswordHash) {
 		return nil, errors.ErrInvalidCredentials
 	}
+
 	token, err := s.generateToken(user)
 	if err != nil {
 		return nil, errors.ErrGenerateTokenFailed
@@ -175,15 +193,44 @@ func (s *Service) DeleteData(ctx context.Context, userID string, dataID string) 
 // Сохраняет данные от клиента и возвращает все данные пользователя
 // измененные после последней синхронизации.
 func (s *Service) SyncData(ctx context.Context, userID string, req *models.SyncRequest) (*models.SyncResponse, error) {
+	// Получаем данные с сервера, измененные после последней синхронизации
 	serverData, err := s.GetUserData(ctx, userID, req.LastSync)
 	if err != nil {
 		return nil, errors.ErrGetSecretDataFailed
 	}
+
+	// Обрабатываем данные от клиента с проверкой конфликтов
 	for i := range req.Data {
-		if err := s.SaveData(ctx, userID, &req.Data[i]); err != nil {
-			s.logger.Warnf("Failed to save client secret data: %v", errors.ErrSaveSecretDataFailed)
+		clientItem := &req.Data[i]
+		clientItem.UserID = userID
+
+		// Проверяем существование данных на сервере
+		serverItem, err := s.repo.GetSecretDataByName(ctx, clientItem.Name, userID)
+		if err != nil && err != errors.ErrDataNotFound {
+			s.logger.Warnf("Failed to check existing data: %v", err)
+			continue
+		}
+
+		if serverItem != nil {
+			// Проверяем конфликт версий
+			if !clientItem.UpdatedAt.After(serverItem.UpdatedAt) || clientItem.Version <= serverItem.Version {
+				s.logger.Debugf("Skipping older client data: %s", clientItem.Name)
+				continue
+			}
+
+			// Обновляем существующие данные
+			clientItem.ID = serverItem.ID
+			if err := s.repo.UpdateSecretData(ctx, clientItem); err != nil {
+				s.logger.Warnf("Failed to update secret data: %v", err)
+			}
+		} else {
+			// Сохраняем новые данные
+			if err := s.repo.SaveSecretData(ctx, clientItem); err != nil {
+				s.logger.Warnf("Failed to save client secret data: %v", err)
+			}
 		}
 	}
+
 	return &models.SyncResponse{
 		LastSync: time.Now(),
 		Data:     serverData,

@@ -9,32 +9,28 @@ import (
 )
 
 type Server struct {
-	cfg     *config.ServerConfig
-	service interfaces.Service
-	router  *Router
-	server  *http.Server
-	logger  *logrus.Logger
+	server *http.Server
+	logger *logrus.Logger
 }
 
 func NewServer(cfg *config.ServerConfig, service interfaces.Service, logger *logrus.Logger) *Server {
+	handler := NewHandler(service, logger)
+	router := NewRouter(logger)
+	router.SetupRoutes(handler)
+
 	return &Server{
-		server:  &http.Server{},
-		cfg:     cfg,
-		service: service,
-		router:  NewRouter(logger),
-		logger:  logger,
+		server: &http.Server{
+			Addr:    cfg.RunAddress,
+			Handler: router,
+		},
+		logger: logger,
 	}
 }
 
 func (s *Server) Start() error {
 	s.logger.Info("Starting server...")
-	s.router.SetupRoutes(NewHandler(s.service, s.logger))
-	httpServer := &http.Server{
-		Addr:    s.cfg.RunAddress,
-		Handler: s.router,
-	}
-	s.logger.Infoln("Server listened address: ", s.cfg.RunAddress)
-	return httpServer.ListenAndServe()
+	s.logger.Infoln("Server listening on address: ", s.server.Addr)
+	return s.server.ListenAndServe()
 }
 
 func (s *Server) Shutdown(ctx context.Context) error {

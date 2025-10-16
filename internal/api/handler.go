@@ -65,14 +65,12 @@ func (h *Handler) Register(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("Registration failed: %v", err), http.StatusBadRequest)
 		return
 	}
+
 	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(resp)
-	if err != nil {
-		h.logger.Errorf("Encoding failed %v", err)
-		http.Error(w, "encoding failed", http.StatusInternalServerError)
-		return
-	}
 	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		h.logger.Errorf("Encoding failed %v", err)
+	}
 }
 
 // Login обрабатывает запрос на аутентификацию пользователя.
@@ -89,13 +87,12 @@ func (h *Handler) Login(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf("Login failed: %v", err), http.StatusUnauthorized)
 		return
 	}
+
 	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(resp)
-	if err != nil {
-		h.logger.Errorf("Encoding failed %v", err)
-		http.Error(w, "encoding failed", http.StatusInternalServerError)
-	}
 	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(resp); err != nil {
+		h.logger.Errorf("Encoding failed %v", err)
+	}
 }
 
 // ListData возвращает список секретных данных пользователя.
@@ -202,13 +199,10 @@ func (h *Handler) GetData(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-	err = json.NewEncoder(w).Encode(data)
-	if err != nil {
-		h.logger.Errorf("Encoding failed %v", err)
-		http.Error(w, "encoding failed", http.StatusInternalServerError)
-		return
-	}
 	w.WriteHeader(http.StatusOK)
+	if err := json.NewEncoder(w).Encode(data); err != nil {
+		h.logger.Errorf("Encoding failed %v", err)
+	}
 }
 
 // SyncData выполняет синхронизацию данных между клиентом и сервером.

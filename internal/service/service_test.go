@@ -2,8 +2,7 @@ package service
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
+	"golang.org/x/crypto/bcrypt"
 	"testing"
 	"time"
 
@@ -164,10 +163,8 @@ func TestService_Login(t *testing.T) {
 	logger := logrus.New()
 	logger.SetLevel(logrus.ErrorLevel)
 
-	// Хэш для правильного пароля
+	// Правильный пароль
 	correctPassword := "correctpass"
-	hashedPassword := sha256.Sum256([]byte(correctPassword))
-	hashedPasswordStr := hex.EncodeToString(hashedPassword[:])
 
 	tests := []struct {
 		name          string
@@ -182,10 +179,13 @@ func TestService_Login(t *testing.T) {
 			login:    "testuser",
 			password: "correctpass",
 			setupMock: func(mr *MockRepository) {
+				// Генерируем bcrypt хэш для правильного пароля
+				hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(correctPassword), bcrypt.DefaultCost)
+
 				mr.On("GetUserByLogin", mock.Anything, "testuser").Return(&models.User{
 					ID:           "user-id",
 					Login:        "testuser",
-					PasswordHash: hashedPasswordStr,
+					PasswordHash: string(hashedPassword),
 				}, nil)
 			},
 			expectedError: nil,
@@ -196,10 +196,11 @@ func TestService_Login(t *testing.T) {
 			login:    "testuser",
 			password: "wrongpass",
 			setupMock: func(mr *MockRepository) {
+				hashedPassword, _ := bcrypt.GenerateFromPassword([]byte(correctPassword), bcrypt.DefaultCost)
 				mr.On("GetUserByLogin", mock.Anything, "testuser").Return(&models.User{
 					ID:           "user-id",
 					Login:        "testuser",
-					PasswordHash: hashedPasswordStr,
+					PasswordHash: string(hashedPassword),
 				}, nil)
 			},
 			expectedError: errors.ErrInvalidCredentials,
@@ -392,8 +393,8 @@ func TestService_hashPassword(t *testing.T) {
 	service := NewService(nil, logrus.New(), "test-secret")
 
 	password := "testpassword123"
-	hash1 := service.hashPassword(password)
-	hash2 := service.hashPassword(password)
+	hash1, _ := service.hashPassword(password)
+	hash2, _ := service.hashPassword(password)
 
 	// Хэш должен быть одинаковым для одного пароля
 	assert.Equal(t, hash1, hash2)

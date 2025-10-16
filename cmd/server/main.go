@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 func main() {
@@ -26,7 +27,7 @@ func main() {
 	}
 	serv := service.NewService(storage, logger, cfg.JWTSecret)
 	server := api.NewServer(cfg, &serv, logger)
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	go func() {
 		if err := server.Start(); err != nil && err != http.ErrServerClosed {

@@ -6,6 +6,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"golang.org/x/term"
 	"os"
 	"path/filepath"
 	"strings"
@@ -82,14 +83,26 @@ func (c *CLI) Run() error {
 	}
 }
 
+func (c *CLI) readPassword(prompt string) (string, error) {
+	fmt.Print(prompt)
+	password, err := term.ReadPassword(int(os.Stdin.Fd()))
+	fmt.Println()
+	if err != nil {
+		return "", fmt.Errorf("failed to read password: %w", err)
+	}
+	return string(password), nil
+}
+
 func (c *CLI) register(ctx context.Context) {
 	fmt.Print("Login: ")
 	c.scanner.Scan()
 	login := c.scanner.Text()
 
-	fmt.Print("Password: ")
-	c.scanner.Scan()
-	password := c.scanner.Text()
+	password, err := c.readPassword("Password: ")
+	if err != nil {
+		fmt.Printf("Failed to read password: %v\n", err)
+		return
+	}
 
 	resp, err := c.client.Register(ctx, login, password)
 	if err != nil {
@@ -97,7 +110,7 @@ func (c *CLI) register(ctx context.Context) {
 		return
 	}
 
-	fmt.Printf("Registration successful! Token: %s\n", resp.Token)
+	fmt.Printf("Registration successful!\n")
 	c.saveToken(resp.Token)
 }
 
@@ -106,9 +119,11 @@ func (c *CLI) login(ctx context.Context) {
 	c.scanner.Scan()
 	login := c.scanner.Text()
 
-	fmt.Print("Password: ")
-	c.scanner.Scan()
-	password := c.scanner.Text()
+	password, err := c.readPassword("Password: ")
+	if err != nil {
+		fmt.Printf("Failed to read password: %v\n", err)
+		return
+	}
 
 	resp, err := c.client.Login(ctx, login, password)
 	if err != nil {
@@ -116,7 +131,7 @@ func (c *CLI) login(ctx context.Context) {
 		return
 	}
 
-	fmt.Printf("Login successful! Token: %s\n", resp.Token)
+	fmt.Printf("Login successful!\n")
 	c.saveToken(resp.Token)
 }
 
@@ -145,9 +160,11 @@ func (c *CLI) saveData(ctx context.Context) {
 		c.scanner.Scan()
 		login := c.scanner.Text()
 
-		fmt.Print("Password: ")
-		c.scanner.Scan()
-		password := c.scanner.Text()
+		password, err := c.readPassword("Password: ")
+		if err != nil {
+			fmt.Printf("Failed to read password: %v\n", err)
+			return
+		}
 
 		loginData := models.LoginPasswordData{
 			Login:    login,
@@ -457,8 +474,11 @@ func (c *CLI) updateData(ctx context.Context) {
 		}
 
 		fmt.Print("New password (leave empty to keep current): ")
-		c.scanner.Scan()
-		newPassword := c.scanner.Text()
+		newPassword, err := c.readPassword("")
+		if err != nil {
+			fmt.Printf("Failed to read password: %v\n", err)
+			return
+		}
 		if newPassword != "" {
 			loginData.Password = newPassword
 		}
